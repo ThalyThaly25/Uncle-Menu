@@ -7,7 +7,7 @@ load_dotenv() #Carga variables del .env.
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL) # Conecta con Neon.
+engine = create_engine(DATABASE_URL, pool_pre_ping=True) # Conecta con Neon.
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
