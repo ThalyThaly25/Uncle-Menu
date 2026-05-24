@@ -31,14 +31,6 @@ app.mount(
     name="static"
 )
 
-@app.get("/test")
-def test():
-    return {"status": "ok"}
-# URL de tu frontend en Cloudflare
-origins = [
-    "https://tu-web.pages.dev"
-]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
