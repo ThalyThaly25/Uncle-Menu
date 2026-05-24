@@ -7,8 +7,6 @@ from database import SessionLocal, Base, engine
 from models import Review
 from datetime import datetime
 
-Base.metadata.create_all(bind = engine)
-
 # Dependencia para inyectar la sesión
 def get_db():
     db = SessionLocal()
@@ -33,6 +31,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+templates = Jinja2Templates(directory="templates")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # DATABASE SIMPLE DE PLATOS
 dishes = {
