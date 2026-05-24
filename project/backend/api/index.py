@@ -119,6 +119,10 @@ dishes = {
     }
 }
 
+@app.get("/")
+def root():
+    return {"status": "API running"}
+
 @app.get("/api/plates/{plate}")
 def read_plate(
     plate: str,
