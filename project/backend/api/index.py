@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, Base, engine
 from models import Review
 from datetime import datetime
+import os
 
 # Dependencia para inyectar la sesión
 def get_db():
@@ -17,6 +18,18 @@ def get_db():
 
 
 app = FastAPI()
+
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+
+templates = Jinja2Templates(
+    directory=os.path.join(BASE_DIR, "templates")
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(BASE_DIR, "static")),
+    name="static"
+)
 
 
 # URL de tu frontend en Cloudflare
@@ -31,10 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-templates = Jinja2Templates(directory="templates")
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # DATABASE SIMPLE DE PLATOS
 dishes = {
