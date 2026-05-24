@@ -1,13 +1,8 @@
-from fastapi import FastAPI, Request, Form, Depends
+from fastapi import FastAPI, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from database import SessionLocal, Base, engine
 from models import Review
-from datetime import datetime
-import os
-
 # Dependencia para inyectar la sesión
 def get_db():
     db = SessionLocal()
@@ -19,17 +14,9 @@ def get_db():
 
 app = FastAPI()
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
-templates = Jinja2Templates(
-    directory=os.path.join(BASE_DIR, "templates")
-)
-
-app.mount(
-    "/static",
-    StaticFiles(directory=os.path.join(BASE_DIR, "static")),
-    name="static"
-)
+origins = [
+    "https://broad-dew-beba.reyesthalia722.workers.dev/"
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -132,64 +119,71 @@ dishes = {
     }
 }
 
+@app.get("/")
+def home():
+    return {"status": "API running"}
 
-@app.get("backend/api/")
-def read_index(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "year":datetime.now().year,
-        })
-
-@app.get("/plates")
-def read_plate(request: Request, plate: str = "", db:Session=Depends(get_db)):
-    dish = dishes.get(plate) 
-
-    # Dentro de read_plate y create_review, cambia la línea de reviews por esta:
-    reviews = db.query(Review).filter(Review.plate_id == plate).order_by(Review.created_at.desc()).all()
-
-    # Calculamos el promedio solo de ese plato
-    avg_score = sum(r.rating for r in reviews) / len(reviews) if reviews else 5.0
-
-    print(f"Cargando plato: {plate}")
-    print(f"Reseñas encontradas en DB para este plato: {len(reviews)}")
-
-    return templates.TemplateResponse(
-        "plates.html",
-        {
-            "request": request,
-            "dish": dish,
-            "plate_name": plate,
-            "reviews": reviews,
-            "avg_score": round(avg_score, 1),
-            "year":datetime.now().year,
-        }
-    )
-
-@app.post("/plates")
-def create_review(
-    request: Request, 
-    name: str = Form(...), 
-    city: str = Form(...), 
-    rating: int = Form(5), 
-    comment: str = Form(...), 
-    plate: str = Form(""), # <--- ESTE ES EL SOSPECHOSO
+@app.get("/api/plates/{plate}")
+def read_plate(
+    plate: str,
     db: Session = Depends(get_db)
 ):
-    # --- PRUEBA DE DEBUG ---
-    print(f"--- POST RECIBIDO ---")
-    print(f"Nombre: {name}")
-    print(f"Plato recibido del formulario: '{plate}'") # Mira si aquí sale vacío ''
-    # -----------------------
+    dish = dishes.get(plate)
+
+    if not dish:
+        return {"error": "Plate not found"}
+
+    reviews = db.query(Review)\
+        .filter(Review.plate_id == plate)\
+        .order_by(Review.created_at.desc())\
+        .all()
+
+    avg_score = (
+        sum(r.rating for r in reviews) / len(reviews)
+        if reviews else 5.0
+    )
+
+    return {
+        "dish": dish,
+        "plate_name": plate,
+        "reviews": [
+            {
+                "name": r.name,
+                "city": r.city,
+                "comment": r.comment,
+                "rating": r.rating
+            }
+            for r in reviews
+        ],
+        "avg_score": round(avg_score, 1)
+    }
+
+@app.get("/api/dishes")
+def get_dishes():
+    return dishes
+
+@app.post("/api/reviews")
+def create_review(
+    name: str = Form(...),
+    city: str = Form(...),
+    rating: int = Form(5),
+    comment: str = Form(...),
+    plate: str = Form(...),
+    db: Session = Depends(get_db)
+):
 
     new_review = Review(
-        name=name, 
-        city=city, 
-        comment=comment, 
+        name=name,
+        city=city,
+        comment=comment,
         rating=rating,
-        plate_id=plate.strip() 
+        plate_id=plate.strip()
     )
+
     db.add(new_review)
     db.commit()
-    
-    # Redirigir o recargar
-    return read_plate(request, plate=plate.strip(), db=db)
+
+    return {
+        "success": True,
+        "message": "Review created"
+    }
