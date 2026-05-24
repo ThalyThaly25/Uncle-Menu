@@ -139,7 +139,7 @@ dishes = {
 }
 
 
-@app.get("/")
+@app.get("backend/api/")
 def read_index(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
